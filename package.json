@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "db:setup": "npx prisma db push && npx prisma db seed"
+    "db:setup": "npx prisma db push && npx prisma db seed",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -30,6 +32,7 @@
     "prisma": "^6.19.2",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3"
   }
 }
