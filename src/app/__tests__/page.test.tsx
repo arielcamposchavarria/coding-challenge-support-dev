@@ -1,16 +1,30 @@
 // @vitest-environment jsdom
+// Extends TypeScript's Assertion type with @testing-library/jest-dom matchers
+// (toBeInTheDocument, toHaveClass, toBeDisabled, etc.).
+// Required because tsconfig doesn't include jest-dom in its "types" array.
+/// <reference types="@testing-library/jest-dom" />
 /**
  * Tests para el componente Dashboard (src/app/page.tsx)
  *
- * Verifican que al resolver un ticket la UI se actualice de forma inmediata,
- * sin necesidad de recargar la página (Bug 2).
+ * Cubre dos bugs del componente:
  *
- * Estrategia:
+ *  Bug 1 — El footer fijo en móvil tapa el botón "Resolver" del último ticket.
+ *    Fix: padding inferior (pb-20 md:pb-0) en el contenedor principal.
+ *    Tests: verifican que las clases de layout correctas estén presentes.
+ *    Nota: jsdom no ejecuta CSS real, por lo que no puede simular solapamiento
+ *    visual. Los tests de layout verifican la estructura (clases Tailwind) que
+ *    produce el comportamiento correcto en un navegador real. Las pruebas de
+ *    solapamiento pixel-perfect corresponden a tests E2E (Playwright/Cypress).
+ *
+ *  Bug 2 — Mutación directa del estado de React impide actualización de la UI.
+ *    Fix: setTickets con updater funcional + Array.map() para crear nuevo array.
+ *    Tests: verifican que la UI se actualice sin recargar la página.
+ *
+ * Estrategia general:
  *  - fetch se mockea globalmente para controlar las respuestas de la API.
- *  - Se usa @testing-library/react para renderizar el componente real y
- *    @testing-library/user-event para simular interacciones de usuario.
- *  - Los tests validan el comportamiento observable desde el punto de vista
- *    del usuario, no los detalles de implementación internos.
+ *  - @testing-library/react renderiza el componente real.
+ *  - @testing-library/user-event simula interacciones del usuario.
+ *  - Los tests validan comportamiento observable, no detalles de implementación.
  */
 
 import { render, screen, waitFor } from '@testing-library/react'
@@ -200,5 +214,59 @@ describe('Dashboard — Bug 2: actualización de estado sin recarga', () => {
         screen.getByText(/no hay tickets pendientes/i)
       ).toBeInTheDocument()
     })
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Bug 1: footer fijo en móvil tapa el botón "Resolver"
+// ---------------------------------------------------------------------------
+
+describe('Dashboard — Bug 1: layout móvil con footer fijo', () => {
+  // Helper compartido: renderiza el Dashboard con un ticket cargado.
+  async function renderWithTicket() {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce({
+      ok: true,
+      json: async () => [OPEN_TICKET],
+    }))
+    render(<Dashboard />)
+    await waitFor(() => {
+      expect(screen.getByText('El dashboard no carga')).toBeInTheDocument()
+    })
+  }
+
+  it('el contenedor principal tiene pb-20 para reservar espacio bajo el footer móvil', async () => {
+    await renderWithTicket()
+
+    // pb-20 empuja el contenido hacia arriba exactamente la altura del footer fijo,
+    // evitando que el último ticket quede oculto tras él en móvil.
+    const wrapper = screen.getByTestId('page-wrapper')
+    expect(wrapper).toHaveClass('pb-20')
+  })
+
+  it('el contenedor principal tiene md:pb-0 para cancelar el padding en desktop', async () => {
+    await renderWithTicket()
+
+    // En desktop el footer no se muestra (md:hidden), por lo que el padding
+    // extra no debe existir y el espacio se aprovecha completamente.
+    const wrapper = screen.getByTestId('page-wrapper')
+    expect(wrapper).toHaveClass('md:pb-0')
+  })
+
+  it('el footer móvil está posicionado como fixed en la parte inferior', async () => {
+    await renderWithTicket()
+
+    // El footer debe ser fixed y pegarse al bottom para que pb-20 sea suficiente.
+    const footer = screen.getByTestId('mobile-footer')
+    expect(footer).toHaveClass('fixed')
+    expect(footer).toHaveClass('bottom-0')
+  })
+
+  it('el footer móvil tiene md:hidden para ocultarse en pantallas grandes', async () => {
+    await renderWithTicket()
+
+    // md:hidden garantiza que el padding de compensación (md:pb-0) y la
+    // visibilidad del footer estén siempre sincronizados.
+    const footer = screen.getByTestId('mobile-footer')
+    expect(footer).toHaveClass('md:hidden')
   })
 })

@@ -85,10 +85,10 @@ export default function Dashboard() {
   }
 
   return (
-    // BUG 1 INTENCIONAL: El Navbar inferior bloquea el contenido
-    // En móviles, falta un padding inferior (ej. pb-20) en este contenedor para que el 
-    // último ticket no quede escondido detrás del fixed footer y su botón sea in-clickeable.
-    <div className="min-h-screen bg-gray-50 relative">
+    // Fix Bug 1: pb-20 reserva espacio en móvil igual a la altura del footer fijo,
+    // evitando que éste tape el último ticket y su botón "Resolver".
+    // md:pb-0 elimina ese espacio en desktop donde el footer no se muestra (md:hidden).
+    <div data-testid="page-wrapper" className="min-h-screen bg-gray-50 relative pb-20 md:pb-0">
       
       {/* Header Fijo */}
       <header className="bg-blue-600 text-white shadow-md sticky top-0 z-10">
@@ -181,8 +181,8 @@ export default function Dashboard() {
         </div>
       </main>
 
-      {/* Mobile Sticky Footer - Causa el Bug 1 en móviles */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] p-4 flex justify-around items-center z-50">
+      {/* Footer de navegación móvil — solo visible en pantallas pequeñas (md:hidden) */}
+      <div data-testid="mobile-footer" className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] p-4 flex justify-around items-center z-50">
         <div className="flex flex-col items-center text-blue-600">
           <Clock className="w-6 h-6 mb-1" />
           <span className="text-xs font-medium">Pendientes</span>
